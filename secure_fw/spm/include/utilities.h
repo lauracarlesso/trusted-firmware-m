@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022, Arm Limited. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright The TrustedFirmware-M Contributors
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,12 +9,18 @@
 
 #include <string.h>
 #include "tfm_spm_log.h"
+#include "cmsis_compiler.h"
 
 /*
  * CPU spin here.
  * Note: this function is used to handle PROGRAMMER ERROR.
  */
-void tfm_core_panic(void);
+__NO_RETURN void tfm_core_panic(void);
+
+/*
+ * Accessor function to get the value of the spm_boundary
+ */
+uintptr_t get_spm_boundary(void);
 
 /* Get container structure start address from member */
 #define TO_CONTAINER(ptr, type, member) \
