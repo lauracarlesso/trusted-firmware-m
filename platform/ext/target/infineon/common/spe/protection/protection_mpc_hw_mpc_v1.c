@@ -279,7 +279,7 @@ FIH_RET_TYPE(enum tfm_hal_status_t) ifx_mpc_verify_static_boundaries(void)
 #ifdef IFX_MEMORY_CONFIGURATOR_MPC_CONFIG
     /* Check violation response provided by Device Configurator */
     for (uint32_t idx = 0UL; idx < cy_mpc_unified_config_count; idx++) {
-        if (!IFX_MPC_IS_EXTERNAL(cy_mpc_unified_config[idx].base))) {
+        if (!IFX_MPC_IS_EXTERNAL(cy_mpc_unified_config[idx].base)) {
             uint32_t response = cy_mpc_unified_config[idx].response ? 1u : 0u;
             if (_FLD2VAL(RAMC_MPC_CFG_RESPONSE,
                          cy_mpc_unified_config[idx].base->CFG) != response) {
@@ -336,9 +336,11 @@ FIH_RET_TYPE(enum tfm_hal_status_t) ifx_mpc_memory_check(const struct ifx_partit
                                                          size_t size,
                                                          uint32_t access_type)
 {
-    const ifx_memory_config_t* mem_region_cfg;
+    ifx_memory_region_split_t splits[IFX_MAX_SPLIT_REGIONS_COUNT] = {0};
+    uint32_t split_count = ARRAY_SIZE(splits);
 #if defined(TFM_FIH_PROFILE_ON) && !defined(TFM_FIH_PROFILE_LOW)
-    const ifx_memory_config_t* mem_region_cfg2;
+    ifx_memory_region_split_t splits2[IFX_MAX_SPLIT_REGIONS_COUNT] = {0};
+    uint32_t split_count2 = ARRAY_SIZE(splits2);
 #endif
 
 #if CONFIG_TFM_PSA_CALL_ADDRESS_REMAP
@@ -378,23 +380,40 @@ FIH_RET_TYPE(enum tfm_hal_status_t) ifx_mpc_memory_check(const struct ifx_partit
     /* CM33 memory list is a comprehensive list of memory regions for the
      * device, protections applied to other memory lists are also applied to CM33
      * memory list so checking only CM 33 list is enough. */
-    mem_region_cfg = ifx_find_memory_config(base, size,
-                                            ifx_memory_cm33_config,
-                                            ifx_memory_cm33_config_count);
+    enum tfm_hal_status_t res = ifx_split_memory_region_across_mpcs(base, size,
+                                                                    ifx_memory_cm33_config,
+                                                                    ifx_memory_cm33_config_count,
+                                                                    splits, &split_count);
+    if ((res != TFM_HAL_SUCCESS) || (split_count == 0U)) {
+        FIH_RET(TFM_HAL_ERROR_INVALID_INPUT);
+    }
 
 #if defined(TFM_FIH_PROFILE_ON) && !defined(TFM_FIH_PROFILE_LOW)
     (void)fih_delay();
-    mem_region_cfg2 = ifx_find_memory_config(base, size,
-                                            ifx_memory_cm33_config,
-                                            ifx_memory_cm33_config_count);
-    if (mem_region_cfg != mem_region_cfg2) {
-        FIH_RET(TFM_HAL_ERROR_MEM_FAULT);
+    enum tfm_hal_status_t res2 = ifx_split_memory_region_across_mpcs(base, size,
+                                                                ifx_memory_cm33_config,
+                                                                ifx_memory_cm33_config_count,
+                                                                splits2, &split_count2);
+
+    if ((res2 != TFM_HAL_SUCCESS) || (split_count2 == 0U) || (split_count != split_count2)) {
+        FIH_RET(TFM_HAL_ERROR_INVALID_INPUT);
+    }
+
+    for (size_t i = 0; i < split_count2; i++) {
+        if ((splits[i].mpc_config != splits2[i].mpc_config) ||
+        (splits[i].region_address != splits2[i].region_address) ||
+        (splits[i].region_size != splits2[i].region_size)) {
+            FIH_RET(TFM_HAL_ERROR_MEM_FAULT);
+        }
     }
 #endif
 
-    if (mem_region_cfg == NULL) {
-        FIH_RET(TFM_HAL_ERROR_INVALID_INPUT);
-    }
+    for (size_t i = 0; i < split_count; i++) {
+        /* base and size are overwritten with splits values to ensure that the original
+         * base and size will not be mistakenly used when applying configuration */
+        const ifx_memory_config_t* mem_region_cfg = splits[i].mpc_config;
+        base = splits[i].region_address;
+        size = splits[i].region_size;
 
     uint32_t block_size      = IFX_MPC_BLOCK_SIZE_TO_BYTES(mem_region_cfg->mpc_block_size);
     uint32_t offset          = IFX_S_ADDRESS_ALIAS(base) - mem_region_cfg->s_address;
@@ -527,6 +546,7 @@ FIH_RET_TYPE(enum tfm_hal_status_t) ifx_mpc_memory_check(const struct ifx_partit
         FIH_RET(TFM_HAL_ERROR_MEM_FAULT);
     }
 #endif
+    }
 
     FIH_RET(TFM_HAL_SUCCESS);
 }

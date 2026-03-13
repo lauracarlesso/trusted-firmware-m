@@ -298,7 +298,7 @@ const cy_stc_gpio_pin_config_t CYBSP_DEBUG_UART_RX_config =
     .vrefSel = 0UL,
     .vohSel = 0UL,
     .pullUpRes = CY_GPIO_PULLUP_RES_DISABLE,
-    .nonSec = 0,
+    .nonSec = 1,
 };
 const cy_stc_gpio_pin_config_t CYBSP_DEBUG_UART_TX_config =
 {
@@ -316,7 +316,7 @@ const cy_stc_gpio_pin_config_t CYBSP_DEBUG_UART_TX_config =
     .vrefSel = 0UL,
     .vohSel = 0UL,
     .pullUpRes = CY_GPIO_PULLUP_RES_DISABLE,
-    .nonSec = 0,
+    .nonSec = 1,
 };
 const cy_stc_gpio_pin_config_t CYBSP_SDHC_CMD_config =
 {
@@ -737,8 +737,8 @@ const cy_stc_gpio_pin_config_t CYBSP_WIFI_HOST_WAKE_config =
     .outVal = 1,
     .driveMode = CY_GPIO_DM_OD_DRIVESLOW,
     .hsiom = CYBSP_WIFI_HOST_WAKE_HSIOM,
-    .intEdge = CY_GPIO_INTR_DISABLE,
-    .intMask = 0UL,
+    .intEdge = CY_GPIO_INTR_RISING,
+    .intMask = 1UL,
     .vtrip = CY_GPIO_VTRIP_CMOS,
     .slewRate = CY_GPIO_SLEW_FAST,
     .driveSel = CY_GPIO_DRIVE_1_2,

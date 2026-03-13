@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
 # Copyright (c) 2023-2025 Cypress Semiconductor Corporation (an Infineon company)
 # or an affiliate of Cypress Semiconductor Corporation. All rights reserved.
+# SPDX-FileCopyrightText: Copyright The TrustedFirmware-M Contributors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -8,19 +9,6 @@
 
 
 include(${IFX_COMMON_SOURCE_DIR}/install.cmake)
-
-if (IFX_MTB_BUILD)
-    install(FILES       ${IFX_COMMON_SOURCE_DIR}/mtb/config/PSE84.mk
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/config)
-    if(EXISTS "${IFX_COMMON_SOURCE_DIR}/mtb/config/PSE84-EPC4.mk")
-        install(FILES   ${IFX_COMMON_SOURCE_DIR}/mtb/config/PSE84-EPC4.mk
-                DESTINATION ${CMAKE_INSTALL_PREFIX}/config)
-    endif()
-    if(EXISTS "${IFX_COMMON_SOURCE_DIR}/mtb/config/PSE84-EPC2.mk")
-        install(FILES   ${IFX_COMMON_SOURCE_DIR}/mtb/config/PSE84-EPC2.mk
-                DESTINATION ${CMAKE_INSTALL_PREFIX}/config)
-    endif()
-endif()
 
 if (NOT PLATFORM_DEFAULT_CRYPTO_KEYS)
     # Platform specific key IDs header
@@ -38,7 +26,9 @@ install(FILES       ${IFX_FAMILY_SOURCE_DIR}/nspe/CMakeLists.txt
         DESTINATION ${INSTALL_PLATFORM_NS_DIR})
 
 configure_file(${IFX_FAMILY_SOURCE_DIR}/nspe/config.cmake.in
-               ${INSTALL_PLATFORM_NS_DIR}/config.cmake @ONLY)
+               ${CMAKE_BINARY_DIR}/generated/platform/cmake/config.cmake @ONLY)
+install(FILES       ${CMAKE_BINARY_DIR}/generated/platform/cmake/config.cmake
+        DESTINATION ${INSTALL_PLATFORM_NS_DIR})
 
 install(DIRECTORY   ${IFX_FAMILY_SOURCE_DIR}/shared
         DESTINATION ${INSTALL_PLATFORM_NS_DIR}/pse84)

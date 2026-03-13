@@ -6,20 +6,21 @@
  *
  */
 
-#ifndef PLATFORM_SVC_HANDLER_H
-#define PLATFORM_SVC_HANDLER_H
+#ifndef PLATFORM_SVC_API_H
+#define PLATFORM_SVC_API_H
+#include <stdint.h>
+#include "psa/client.h"
 
-#include "config_tfm.h"
-#include "svc_num.h"
+/**
+ * Structure to hold original input and output vectors and their counts
+ */
+typedef struct ifx_original_iovec_t {
+    psa_invec invec[PSA_MAX_IOVEC];
+    psa_outvec outvec[PSA_MAX_IOVEC];
+    size_t invec_count;
+    size_t outvec_count;
+} ifx_original_iovec_t;
 
-/* SVC request to write message to SPM UART. Is used to "share" UART with non-secure image. */
-#define IFX_SVC_PLATFORM_UART_LOG           TFM_SVC_NUM_PLATFORM_THREAD(0x0U)
-
-/* SVC request to Enable/Disable SysTick */
-#define IFX_SVC_PLATFORM_ENABLE_SYSTICK     TFM_SVC_NUM_PLATFORM_THREAD(0x1U)
-
-/* SVC request for system reset to reset the MCU */
-#define IFX_SVC_PLATFORM_SYSTEM_RESET       TFM_SVC_NUM_PLATFORM_THREAD(0x2U)
 
 /**
  * \brief Enable/disable SysTick for FLIH/SLIH tf-m-tests
@@ -49,4 +50,11 @@ int32_t ifx_call_platform_uart_log(const char *str, uint32_t len, uint32_t core_
  */
 void ifx_call_platform_system_reset(void);
 
-#endif /* PLATFORM_SVC_HANDLER_H */
+/**
+ * \brief Retrieve the original IO vectors
+ */
+psa_status_t ifx_call_platform_original_iovec(psa_handle_t msg_handle,
+                                              ifx_original_iovec_t *io_vec);
+
+
+#endif /* PLATFORM_SVC_API_H */

@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2025 Cypress Semiconductor Corporation (an Infineon company)
+# Copyright (c) 2023-2026 Cypress Semiconductor Corporation (an Infineon company)
 # or an affiliate of Cypress Semiconductor Corporation. All rights reserved.
+# SPDX-FileCopyrightText: Copyright The TrustedFirmware-M Contributors
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -44,13 +45,6 @@ if (TFM_PARTITION_CRYPTO)
         target_compile_definitions(tfm_config
             INTERFACE
                 CRYPTO_ENGINE_BUF_SIZE=${CRYPTO_ENGINE_BUF_SIZE}
-        )
-    endif()
-
-    if(DEFINED IFX_MBEDTLS_CONFIG_PATH)
-        target_compile_definitions(tfm_config
-            INTERFACE
-                IFX_MBEDTLS_CONFIG_PATH="${IFX_MBEDTLS_CONFIG_PATH}"
         )
     endif()
 
@@ -136,10 +130,50 @@ if (TFM_PARTITION_CRYPTO)
         )
     endif()
 
-    target_sources(platform_s
-        PRIVATE
-            $<$<NOT:$<BOOL:${PLATFORM_DEFAULT_NV_SEED}>>:${IFX_COMMON_SOURCE_DIR}/spe/services/crypto/crypto_nv_seed.c>
+    if (IFX_MBEDTLS_ACCELERATION_ENABLED)
+        target_link_libraries(platform_crypto_keys
+            PUBLIC
+                ifx_mbedtls_acceleration
+        )
+
+        if (IFX_SE_IPC_SERVICE_TYPE STREQUAL "FULL")
+            # SE RT Services Utils provides additional PSA Crypto types. mbedTLS acceleration library
+            # provides PSA crypto API. Thus accelerator library is dependent on SE RT Services Utils.
+            target_link_libraries(ifx_mbedtls_acceleration
+                PUBLIC
+                    ${IFX_SE_RT_SERVICES_UTILS_S_TARGET}
+            )
+        endif()
+    endif()
+
+    # target_include_directories(crypto_service_tfpsacrypto
+    #     INTERFACE
+    #         ${CMAKE_CURRENT_SOURCE_DIR}/crypto/mbedtls_accel_configs
+    # )
+
+    # target_compile_definitions(crypto_service_tfpsacrypto
+    #     INTERFACE
+    #         $<$<BOOL:${CRYPTO_HW_ACCELERATOR_CONFIG}>:CRYPTO_HW_ACCELERATOR_CONFIG="${CRYPTO_HW_ACCELERATOR_CONFIG}">
+    #         $<$<BOOL:${IFX_MBEDTLS_CONFIG_PATH}>:IFX_MBEDTLS_CONFIG_PATH="${IFX_MBEDTLS_CONFIG_PATH}">
+    # )
+
+    target_compile_definitions(psa_crypto_config
+        INTERFACE
+            $<BUILD_INTERFACE:$<$<BOOL:${CRYPTO_HW_ACCELERATOR_CONFIG}>:CRYPTO_HW_ACCELERATOR_CONFIG="${CRYPTO_HW_ACCELERATOR_CONFIG}">>
     )
+
+    if (NOT PLATFORM_DEFAULT_NV_SEED)
+        target_sources(platform_s
+            PRIVATE
+                # Common nv seed functionality
+                ${IFX_COMMON_SOURCE_DIR}/spe/services/crypto/crypto_nv_seed.c
+
+                # NV seed driver depending on acceleration type. Used regardless
+                # of IFX_MBEDTLS_ACCELERATION_ENABLED value.
+                $<$<STREQUAL:${IFX_MBEDTLS_ACCELERATOR_TYPE},MXCRYPTO>:${IFX_COMMON_SOURCE_DIR}/spe/services/crypto/crypto_nv_seed_mxcrypto.c>
+                $<$<STREQUAL:${IFX_MBEDTLS_ACCELERATOR_TYPE},CRYPTOLITE>:${IFX_COMMON_SOURCE_DIR}/spe/services/crypto/crypto_nv_seed_cryptolite.c>
+        )
+    endif()
 endif()
 
 if (TFM_PARTITION_INITIAL_ATTESTATION)
